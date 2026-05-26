@@ -68,6 +68,18 @@ func authentication_kerberos_v5() ([]byte,error){
 	return buf.Bytes(),nil	
 }
 
+func authentication_clear_text_password()([]byte,error){
+	var buf bytes.Buffer 
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthCleartext)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil	
+}
+
 func main(){
 	println("Hello seamen!")
 }
