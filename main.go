@@ -29,6 +29,7 @@ const (
 // Auth result codes
 const (
 	AuthOK               = 0
+	AuthKerberosV5			 = 2
 	AuthMD5              = 5
 	AuthCleartext        = 3
 	AuthSASL             = 10
@@ -53,6 +54,18 @@ func authentication_ok()([]byte,error){
 		return nil,err
 	}
 	return buf.Bytes(),nil
+}
+
+func authentication_kerberos_v5() ([]byte,error){
+	var buf bytes.Buffer 
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthKerberosV5)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil	
 }
 
 func main(){
