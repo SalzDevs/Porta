@@ -80,6 +80,19 @@ func authentication_clear_text_password()([]byte,error){
 	return buf.Bytes(),nil	
 }
 
+func authentication_md5_password(salt [4]byte)([]byte,error){
+	var buf bytes.Buffer 
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(12)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthMD5)); err!=nil {
+		return nil,err
+	}
+	buf.Write(salt[:])	
+	return buf.Bytes(),nil	
+}
+
 func main(){
 	println("Hello seamen!")
 }
