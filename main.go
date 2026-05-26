@@ -34,6 +34,7 @@ const (
 	AuthMD5              = 5
 	AuthGSS 						 = 7 
 	AuthGSSContinue 		 = 8
+	AuthSSPI						 = 9
 	AuthSASL             = 10
 	AuthSASLContinue     = 11
 	AuthSASLFinal        = 12
@@ -116,9 +117,21 @@ func authentication_gss_continue(gssapi_or_sspi_data []byte)([]byte,error){
 	}
 	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthGSSContinue)); err!=nil {
 		return nil,err
-	}
+	}		
 	buf.Write(gssapi_or_sspi_data[:])
 	return buf.Bytes(),nil	
+}
+
+func authentication_sspi()([]byte,error){
+	var buf bytes.Buffer   
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSSPI)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil		
 }
 
 func main(){
