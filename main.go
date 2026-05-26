@@ -30,8 +30,9 @@ const (
 const (
 	AuthOK               = 0
 	AuthKerberosV5			 = 2
+	AuthCleartext      	 = 3
 	AuthMD5              = 5
-	AuthCleartext        = 3
+	AuthGSS 						 = 7 
 	AuthSASL             = 10
 	AuthSASLContinue     = 11
 	AuthSASLFinal        = 12
@@ -90,6 +91,18 @@ func authentication_md5_password(salt [4]byte)([]byte,error){
 		return nil,err
 	}
 	buf.Write(salt[:])	
+	return buf.Bytes(),nil	
+}
+
+func authentication_gss()([]byte,error){
+	var buf bytes.Buffer 
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthGSS)); err!=nil {
+		return nil,err
+	}
 	return buf.Bytes(),nil	
 }
 
