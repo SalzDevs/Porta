@@ -164,6 +164,20 @@ func authentication_sasl_continue(sasl_data []byte)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func authentication_sasl_final(sasl_additional_data []byte)([]byte,error){
+	var buf bytes.Buffer  
+	length := len(sasl_additional_data) + 8 
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSASLFinal)); err!=nil {
+		return nil,err
+	}
+	buf.Write([]byte(sasl_additional_data))
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
