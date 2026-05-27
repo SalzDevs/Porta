@@ -134,6 +134,22 @@ func authentication_sspi()([]byte,error){
 	return buf.Bytes(),nil		
 }
 
+func authentication_sasl(name_of_sals_auth_mechanism string)([]byte,error){
+	var buf bytes.Buffer  
+	length := len(name_of_sals_auth_mechanism) + 10
+	buf.WriteByte(MsgAuthentication)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSASL)); err!=nil {
+		return nil,err
+	}
+	buf.Write([]byte(name_of_sals_auth_mechanism))
+	buf.WriteByte(0)
+	buf.WriteByte(0)
+	return buf.Bytes(),nil		
+}
+
 func main(){
 	println("Hello seamen!")
 }
