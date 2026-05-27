@@ -96,5 +96,9 @@ func forwardClientMessages(r *bufio.Reader, w io.Writer) error {
 		if _, err := w.Write(payload); err != nil {
 			return err
 		}
+
+		if msgType == MsgTerminate {
+			return nil
+		}
 	}
 }
