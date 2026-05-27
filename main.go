@@ -27,6 +27,7 @@ const (
 	MsgFunctionCallResponse = 'V'
 	MsgEmptyQueryResponse = 'I'
 	MsgNoData            = 'n'
+	MsgNotificationResponse = 'A'
 	MsgNoticeResponse    = 'N'
 	MsgParseComplete     = '1'
 	MsgBindComplete      = '2'
@@ -458,6 +459,24 @@ func notice_response(fields map[byte]string)([]byte,error){
 		buf.Write([]byte(value))
 		buf.WriteByte(0)
 	}
+	buf.WriteByte(0)
+	return buf.Bytes(),nil
+}
+
+func notification_response(pid int32, channel string, payload string)([]byte,error){
+	var buf bytes.Buffer
+	length := 10 + len(channel) + len(payload)
+
+	buf.WriteByte(MsgNotificationResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,pid); err!=nil {
+		return nil,err
+	}
+	buf.Write([]byte(channel))
+	buf.WriteByte(0)
+	buf.Write([]byte(payload))
 	buf.WriteByte(0)
 	return buf.Bytes(),nil
 }
