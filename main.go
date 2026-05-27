@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -25,6 +26,13 @@ func main() {
 		}
 	}
 
+	idleTimeout := 10 * time.Minute
+	if s := os.Getenv("PORTA_IDLE_TIMEOUT"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil && d > 0 {
+			idleTimeout = d
+		}
+	}
+
 	listener, err := net.Listen("tcp", listen)
 	if err != nil {
 		log.Fatalf("listen: %v", err)
@@ -32,7 +40,7 @@ func main() {
 	defer listener.Close()
 	log.Printf("porta listening on %s", listen)
 
-	pool := NewPool(poolSize)
+	pool := NewPool(poolSize, idleTimeout)
 	for {
 		client, err := listener.Accept()
 		if err != nil {

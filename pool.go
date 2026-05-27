@@ -3,24 +3,30 @@ package main
 import (
 	"net"
 	"sync"
+	"time"
 )
 
 type PooledConn struct {
-	conn    net.Conn
-	startup []byte
+	conn     net.Conn
+	startup  []byte
+	lastUsed time.Time
 }
 
 type Pool struct {
-	mu      sync.Mutex
-	idle    map[string][]*PooledConn
-	maxSize int
+	mu          sync.Mutex
+	idle        map[string][]*PooledConn
+	maxSize     int
+	idleTimeout time.Duration
 }
 
-func NewPool(maxSize int) *Pool {
-	return &Pool{
-		idle:    make(map[string][]*PooledConn),
-		maxSize: maxSize,
+func NewPool(maxSize int, idleTimeout time.Duration) *Pool {
+	p := &Pool{
+		idle:        make(map[string][]*PooledConn),
+		maxSize:     maxSize,
+		idleTimeout: idleTimeout,
 	}
+	go p.sweep()
+	return p
 }
 
 func (p *Pool) Get(key string) *PooledConn {
@@ -38,6 +44,8 @@ func (p *Pool) Get(key string) *PooledConn {
 }
 
 func (p *Pool) Put(key string, pc *PooledConn) {
+	pc.lastUsed = time.Now()
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -46,4 +54,23 @@ func (p *Pool) Put(key string, pc *PooledConn) {
 		return
 	}
 	p.idle[key] = append(p.idle[key], pc)
+}
+
+func (p *Pool) sweep() {
+	for {
+		time.Sleep(60 * time.Second)
+		p.mu.Lock()
+		for key, conns := range p.idle {
+			alive := make([]*PooledConn, 0, len(conns))
+			for _, pc := range conns {
+				if time.Since(pc.lastUsed) > p.idleTimeout {
+					pc.conn.Close()
+				} else {
+					alive = append(alive, pc)
+				}
+			}
+			p.idle[key] = alive
+		}
+		p.mu.Unlock()
+	}
 }
