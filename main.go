@@ -30,6 +30,7 @@ const (
 	MsgNoData            = 'n'
 	MsgNotificationResponse = 'A'
 	MsgNoticeResponse    = 'N'
+	MsgPortalSuspended   = 's'
 	MsgParseComplete     = '1'
 	MsgBindComplete      = '2'
 	MsgCloseComplete     = '3'
@@ -519,6 +520,15 @@ func parameter_status(name string, value string)([]byte,error){
 func parse_complete()([]byte,error){
 	var buf bytes.Buffer
 	buf.WriteByte(MsgParseComplete)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+}
+
+func portal_suspended()([]byte,error){
+	var buf bytes.Buffer
+	buf.WriteByte(MsgPortalSuspended)
 	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
 		return nil,err
 	}
