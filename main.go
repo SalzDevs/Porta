@@ -12,6 +12,8 @@ const (
 	MsgPasswordMessage   = 'p'
 	MsgCopyData					 = 'd'
 	MsgCopyDone					 = 'c'
+	MsgCopyInResponse    = 'G'
+	MsgCopyOutResponse   = 'H'
 	MsgAuthentication    = 'R'
 	MsgReadyForQuery     = 'Z'
 	MsgErrorResponse     = 'E'
@@ -236,14 +238,59 @@ func copy_data(data []byte)([]byte,error){
 
 func copy_done()([]byte,error){
 	var buf bytes.Buffer 
-	 
 	buf.WriteByte(MsgCopyDone)
 	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
 		return nil,err
 	}
 	return buf.Bytes(),nil
-	
 }
+
+func copy_in_response(overall_format int8, column_formats []int16)([]byte,error){
+	var buf bytes.Buffer
+	length := 7 + len(column_formats)*2 
+	buf.WriteByte(MsgCopyInResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,overall_format); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int16(len(column_formats))); err!=nil {
+		return nil,err
+	}
+
+	for _, fc := range column_formats {
+		if err:= binary.Write(&buf,binary.BigEndian,fc); err!=nil {
+			return nil,err
+		}
+	}
+	return buf.Bytes(),nil
+}
+
+func copy_out_response(overall_format int8, column_formats []int16)([]byte,error){
+	var buf bytes.Buffer
+	length := 7 + len(column_formats)*2 
+	buf.WriteByte(MsgCopyOutResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,overall_format); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int16(len(column_formats))); err!=nil {
+		return nil,err
+	}
+
+	for _, fc := range column_formats {
+		if err:= binary.Write(&buf,binary.BigEndian,fc); err!=nil {
+			return nil,err
+		}
+	}
+
+	return buf.Bytes(),nil
+}
+
+
 
 func main(){
 	println("Hello seamen!")
