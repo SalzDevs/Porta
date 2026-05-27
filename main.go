@@ -23,6 +23,7 @@ const (
 	MsgCommandComplete   = 'C'
 	MsgDataRow           = 'D'
 	MsgRowDescription    = 'T'
+	MsgFunctionCallResponse = 'V'
 	MsgEmptyQueryResponse = 'I'
 	MsgNoticeResponse    = 'N'
 	MsgParseComplete     = '1'
@@ -375,6 +376,32 @@ func error_response(fields map[byte]string)([]byte,error){
 		buf.WriteByte(0)
 	}
 	buf.WriteByte(0) 
+	return buf.Bytes(),nil
+}
+
+func function_call_response(result []byte)([]byte,error){
+	var buf bytes.Buffer
+	var result_len int32
+	if result == nil {
+		result_len = -1
+	} else {
+		result_len = int32(len(result))
+	}
+	length := 4 + 4
+	if result != nil {
+		length += len(result)
+	}
+
+	buf.WriteByte(MsgFunctionCallResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,result_len); err!=nil {
+		return nil,err
+	}
+	if result != nil {
+		buf.Write(result)
+	}
 	return buf.Bytes(),nil
 }
 
