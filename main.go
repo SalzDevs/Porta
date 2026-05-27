@@ -14,6 +14,7 @@ const (
 	MsgCopyDone					 = 'c'
 	MsgCopyInResponse    = 'G'
 	MsgCopyOutResponse   = 'H'
+	MsgCopyBothResponse  = 'W'
 	MsgAuthentication    = 'R'
 	MsgReadyForQuery     = 'Z'
 	MsgErrorResponse     = 'E'
@@ -290,7 +291,28 @@ func copy_out_response(overall_format int8, column_formats []int16)([]byte,error
 	return buf.Bytes(),nil
 }
 
+func copy_both_response(overall_format int8, column_formats []int16)([]byte,error){
+	var buf bytes.Buffer
+	length := 7 + len(column_formats)*2 
+	buf.WriteByte(MsgCopyBothResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,overall_format); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int16(len(column_formats))); err!=nil {
+		return nil,err
+	}
 
+	for _, fc := range column_formats {
+		if err:= binary.Write(&buf,binary.BigEndian,fc); err!=nil {
+			return nil,err
+		}
+	}
+
+	return buf.Bytes(),nil	
+}
 
 func main(){
 	println("Hello seamen!")
