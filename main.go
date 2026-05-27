@@ -192,6 +192,15 @@ func backend_key_data(secret_key []byte, process_id int32)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func bind_complete()([]byte,error){
+	var buf bytes.Buffer  
+	buf.WriteByte(MsgBindComplete)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
