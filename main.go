@@ -348,6 +348,15 @@ func data_row(values [][]byte)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func empty_query_response()([]byte,error){
+	var buf bytes.Buffer
+	buf.WriteByte(MsgEmptyQueryResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
