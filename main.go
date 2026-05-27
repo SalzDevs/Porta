@@ -11,6 +11,7 @@ const (
 	MsgTerminate         = 'X'
 	MsgPasswordMessage   = 'p'
 	MsgCopyData					 = 'd'
+	MsgCopyDone					 = 'c'
 	MsgAuthentication    = 'R'
 	MsgReadyForQuery     = 'Z'
 	MsgErrorResponse     = 'E'
@@ -231,7 +232,17 @@ func copy_data(data []byte)([]byte,error){
 	}
 	buf.Write(data)
 	return buf.Bytes(),nil
+}
 
+func copy_done()([]byte,error){
+	var buf bytes.Buffer 
+	 
+	buf.WriteByte(MsgCopyDone)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+	
 }
 
 func main(){
