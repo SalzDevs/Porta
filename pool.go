@@ -5,18 +5,23 @@ import (
 	"sync"
 )
 
+type PooledConn struct {
+	conn    net.Conn
+	startup []byte
+}
+
 type Pool struct {
 	mu   sync.Mutex
-	idle map[string][]net.Conn
+	idle map[string][]*PooledConn
 }
 
 func NewPool() *Pool {
 	return &Pool{
-		idle: make(map[string][]net.Conn),
+		idle: make(map[string][]*PooledConn),
 	}
 }
 
-func (p *Pool) Get(key string) net.Conn {
+func (p *Pool) Get(key string) *PooledConn {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -25,14 +30,14 @@ func (p *Pool) Get(key string) net.Conn {
 		return nil
 	}
 
-	conn := conns[len(conns)-1]
+	pc := conns[len(conns)-1]
 	p.idle[key] = conns[:len(conns)-1]
-	return conn
+	return pc
 }
 
-func (p *Pool) Put(key string, conn net.Conn) {
+func (p *Pool) Put(key string, pc *PooledConn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.idle[key] = append(p.idle[key], conn)
+	p.idle[key] = append(p.idle[key], pc)
 }
