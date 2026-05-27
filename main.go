@@ -10,7 +10,7 @@ const (
 	MsgQuery             = 'Q'
 	MsgTerminate         = 'X'
 	MsgPasswordMessage   = 'p'
-
+	MsgCopyData					 = 'd'
 	MsgAuthentication    = 'R'
 	MsgReadyForQuery     = 'Z'
 	MsgErrorResponse     = 'E'
@@ -220,6 +220,18 @@ func command_complete(command_tag string)([]byte,error){
 	buf.Write([]byte(command_tag))
 	buf.WriteByte(0)
 	return buf.Bytes(),nil
+}
+
+func copy_data(data []byte)([]byte,error){
+	var buf bytes.Buffer 
+	length := len(data) + 4 
+	buf.WriteByte(MsgCopyData)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	buf.Write(data)
+	return buf.Bytes(),nil
+
 }
 
 func main(){
