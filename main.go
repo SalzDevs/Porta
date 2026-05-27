@@ -7,444 +7,125 @@ import (
 
 // Message type bytes
 const (
-	MsgQuery             = 'Q'
-	MsgTerminate         = 'X'
-	MsgPasswordMessage   = 'p'
-	MsgCopyData					 = 'd'
-	MsgCopyDone					 = 'c'
-	MsgCopyInResponse    = 'G'
-	MsgCopyOutResponse   = 'H'
-	MsgCopyBothResponse  = 'W'
-	MsgAuthentication    = 'R'
-	MsgReadyForQuery     = 'Z'
-	MsgErrorResponse     = 'E'
-	MsgBackendKeyData    = 'K'
-	MsgParameterDescription = 't'
-	MsgParameterStatus   = 'S'
-	MsgCommandComplete   = 'C'
-	MsgDataRow           = 'D'
-	MsgRowDescription    = 'T'
-	MsgNegotiateProtocolVersion = 'v'
-	MsgFunctionCallResponse = 'V'
+	MsgQuery            = 'Q'
+	MsgTerminate        = 'X'
+	MsgPasswordMessage  = 'p'
+
+	MsgAuthentication   = 'R'
+	MsgReadyForQuery    = 'Z'
+	MsgErrorResponse    = 'E'
+	MsgBackendKeyData   = 'K'
+	MsgParameterStatus  = 'S'
+	MsgCommandComplete  = 'C'
+	MsgDataRow          = 'D'
+	MsgRowDescription   = 'T'
 	MsgEmptyQueryResponse = 'I'
-	MsgNoData            = 'n'
-	MsgNotificationResponse = 'A'
-	MsgNoticeResponse    = 'N'
-	MsgPortalSuspended   = 's'
-	MsgParseComplete     = '1'
-	MsgBindComplete      = '2'
-	MsgCloseComplete     = '3'
+	MsgNoData           = 'n'
+	MsgNoticeResponse   = 'N'
+	MsgParseComplete    = '1'
+	MsgBindComplete     = '2'
+	MsgCloseComplete    = '3'
+	MsgPortalSuspended  = 's'
 )
 
 // Auth result codes
 const (
-	AuthOK               = 0
-	AuthKerberosV5			 = 2
-	AuthCleartext      	 = 3
-	AuthMD5              = 5
-	AuthGSS 						 = 7 
-	AuthGSSContinue 		 = 8
-	AuthSSPI						 = 9
-	AuthSASL             = 10
-	AuthSASLContinue     = 11
-	AuthSASLFinal        = 12
+	AuthOK  = 0
+	AuthMD5 = 5
 )
 
 // Transaction statuses for ReadyForQuery
 const (
-	TxnIdle             = 'I'
-	TxnInTransaction    = 'T'
-	TxnFailed           = 'E'
+	TxnIdle          = 'I'
+	TxnInTransaction = 'T'
+	TxnFailed        = 'E'
 )
 
-func authentication_ok()([]byte,error){
-	var buf bytes.Buffer 
+// ── Backend message builders ──
+
+func authentication_ok() ([]byte, error) {
+	var buf bytes.Buffer
 	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(8)); err != nil {
+		return nil, err
 	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthOK)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(AuthOK)); err != nil {
+		return nil, err
 	}
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func authentication_kerberos_v5() ([]byte,error){
-	var buf bytes.Buffer 
+func authentication_md5_password(salt [4]byte) ([]byte, error) {
+	var buf bytes.Buffer
 	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(12)); err != nil {
+		return nil, err
 	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthKerberosV5)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(AuthMD5)); err != nil {
+		return nil, err
 	}
-	return buf.Bytes(),nil	
+	buf.Write(salt[:])
+	return buf.Bytes(), nil
 }
 
-func authentication_clear_text_password()([]byte,error){
-	var buf bytes.Buffer 
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthCleartext)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil	
-}
-
-func authentication_md5_password(salt [4]byte)([]byte,error){
-	var buf bytes.Buffer 
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(12)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthMD5)); err!=nil {
-		return nil,err
-	}
-	buf.Write(salt[:])	
-	return buf.Bytes(),nil	
-}
-
-func authentication_gss()([]byte,error){
-	var buf bytes.Buffer 
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthGSS)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil	
-}
-
-func authentication_gss_continue(gssapi_or_sspi_data []byte)([]byte,error){
-	length := len(gssapi_or_sspi_data) + 8
-	var buf bytes.Buffer   
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthGSSContinue)); err!=nil {
-		return nil,err
-	}		
-	buf.Write(gssapi_or_sspi_data[:])
-	return buf.Bytes(),nil	
-}
-
-func authentication_sspi()([]byte,error){
-	var buf bytes.Buffer   
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(8)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSSPI)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil		
-}
-
-func authentication_sasl(name_of_sals_auth_mechanism string)([]byte,error){
-	var buf bytes.Buffer  
-	length := len(name_of_sals_auth_mechanism) + 10
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSASL)); err!=nil {
-		return nil,err
-	}
-	buf.Write([]byte(name_of_sals_auth_mechanism))
-	buf.WriteByte(0)
-	buf.WriteByte(0)
-	return buf.Bytes(),nil		
-}
-
-func authentication_sasl_continue(sasl_data []byte)([]byte,error){
-	var buf bytes.Buffer  
-	length := len(sasl_data) + 8 
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSASLContinue)); err!=nil {
-		return nil,err
-	}
-	buf.Write([]byte(sasl_data))
-	return buf.Bytes(),nil
-}
-
-func authentication_sasl_final(sasl_additional_data []byte)([]byte,error){
-	var buf bytes.Buffer  
-	length := len(sasl_additional_data) + 8 
-	buf.WriteByte(MsgAuthentication)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(AuthSASLFinal)); err!=nil {
-		return nil,err
-	}
-	buf.Write([]byte(sasl_additional_data))
-	return buf.Bytes(),nil
-}
-
-func backend_key_data(secret_key []byte, process_id int32)([]byte,error){
-	var buf bytes.Buffer  
-	length := len(secret_key) + 8 
+func backend_key_data(secret_key []byte, process_id int32) ([]byte, error) {
+	var buf bytes.Buffer
+	length := len(secret_key) + 8
 	buf.WriteByte(MsgBackendKeyData)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
 	}
-	if err:= binary.Write(&buf,binary.BigEndian,process_id); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, process_id); err != nil {
+		return nil, err
 	}
 	buf.Write([]byte(secret_key))
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func bind_complete()([]byte,error){
-	var buf bytes.Buffer  
-	buf.WriteByte(MsgBindComplete)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
+func ready_for_query(status byte) ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte(MsgReadyForQuery)
+	if err := binary.Write(&buf, binary.BigEndian, int32(5)); err != nil {
+		return nil, err
 	}
-	return buf.Bytes(),nil
+	buf.WriteByte(status)
+	return buf.Bytes(), nil
 }
 
-func close_complete()([]byte,error){
-	var buf bytes.Buffer  
-	buf.WriteByte(MsgCloseComplete)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil
-}
-
-func command_complete(command_tag string)([]byte,error){
-	var buf bytes.Buffer 
-	length := len(command_tag) + 5 
+func command_complete(command_tag string) ([]byte, error) {
+	var buf bytes.Buffer
+	length := len(command_tag) + 5
 	buf.WriteByte(MsgCommandComplete)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
 	}
 	buf.Write([]byte(command_tag))
 	buf.WriteByte(0)
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func copy_data(data []byte)([]byte,error){
-	var buf bytes.Buffer 
-	length := len(data) + 4 
-	buf.WriteByte(MsgCopyData)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	buf.Write(data)
-	return buf.Bytes(),nil
-}
-
-func copy_done()([]byte,error){
-	var buf bytes.Buffer 
-	buf.WriteByte(MsgCopyDone)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil
-}
-
-func copy_in_response(overall_format int8, column_formats []int16)([]byte,error){
-	var buf bytes.Buffer
-	length := 7 + len(column_formats)*2 
-	buf.WriteByte(MsgCopyInResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,overall_format); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int16(len(column_formats))); err!=nil {
-		return nil,err
-	}
-
-	for _, fc := range column_formats {
-		if err:= binary.Write(&buf,binary.BigEndian,fc); err!=nil {
-			return nil,err
-		}
-	}
-	return buf.Bytes(),nil
-}
-
-func copy_out_response(overall_format int8, column_formats []int16)([]byte,error){
-	var buf bytes.Buffer
-	length := 7 + len(column_formats)*2 
-	buf.WriteByte(MsgCopyOutResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,overall_format); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int16(len(column_formats))); err!=nil {
-		return nil,err
-	}
-
-	for _, fc := range column_formats {
-		if err:= binary.Write(&buf,binary.BigEndian,fc); err!=nil {
-			return nil,err
-		}
-	}
-
-	return buf.Bytes(),nil
-}
-
-func copy_both_response(overall_format int8, column_formats []int16)([]byte,error){
-	var buf bytes.Buffer
-	length := 7 + len(column_formats)*2 
-	buf.WriteByte(MsgCopyBothResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,overall_format); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int16(len(column_formats))); err!=nil {
-		return nil,err
-	}
-
-	for _, fc := range column_formats {
-		if err:= binary.Write(&buf,binary.BigEndian,fc); err!=nil {
-			return nil,err
-		}
-	}
-
-	return buf.Bytes(),nil	
-}
-
-func data_row(values [][]byte)([]byte,error){
-	var buf bytes.Buffer
-	payload_len := 2
-	for _, v := range values {
-		if v == nil {
-			payload_len += 4
-		} else {
-			payload_len += 4 + len(v)
-		}
-	}
-	length := 4 + payload_len
-
-	buf.WriteByte(MsgDataRow)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int16(len(values))); err!=nil {
-		return nil,err
-	}
-	for _, v := range values {
-		if v == nil {
-			if err:= binary.Write(&buf,binary.BigEndian,int32(-1)); err!=nil {
-				return nil,err
-			}
-		} else {
-			if err:= binary.Write(&buf,binary.BigEndian,int32(len(v))); err!=nil {
-				return nil,err
-			}
-			buf.Write(v)
-		}
-	}
-	return buf.Bytes(),nil
-}
-
-func empty_query_response()([]byte,error){
-	var buf bytes.Buffer
-	buf.WriteByte(MsgEmptyQueryResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil
-}
-
-func error_response(fields map[byte]string)([]byte,error){
+func error_response(fields map[byte]string) ([]byte, error) {
 	var buf bytes.Buffer
 	payload_len := 1
 	for _, value := range fields {
-		payload_len += 1 + len(value) + 1 
+		payload_len += 1 + len(value) + 1
 	}
 	length := 4 + payload_len
 
 	buf.WriteByte(MsgErrorResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
 	}
 	for code, value := range fields {
 		buf.WriteByte(code)
 		buf.Write([]byte(value))
 		buf.WriteByte(0)
 	}
-	buf.WriteByte(0) 
-	return buf.Bytes(),nil
+	buf.WriteByte(0)
+	return buf.Bytes(), nil
 }
 
-func function_call_response(result []byte)([]byte,error){
-	var buf bytes.Buffer
-	var result_len int32
-	if result == nil {
-		result_len = -1
-	} else {
-		result_len = int32(len(result))
-	}
-	length := 4 + 4
-	if result != nil {
-		length += len(result)
-	}
-
-	buf.WriteByte(MsgFunctionCallResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,result_len); err!=nil {
-		return nil,err
-	}
-	if result != nil {
-		buf.Write(result)
-	}
-	return buf.Bytes(),nil
-}
-
-func negotiate_protocol_version(newest_minor int32, unrecognized_options []string)([]byte,error){
-	var buf bytes.Buffer
-	payload_len := 4 + 4 
-	for _, opt := range unrecognized_options {
-		payload_len += len(opt) + 1 
-	}
-	length := 4 + payload_len
-
-	buf.WriteByte(MsgNegotiateProtocolVersion)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,newest_minor); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int32(len(unrecognized_options))); err!=nil {
-		return nil,err
-	}
-	for _, opt := range unrecognized_options {
-		buf.Write([]byte(opt))
-		buf.WriteByte(0)
-	}
-	return buf.Bytes(),nil
-}
-
-func no_data()([]byte,error){
-	var buf bytes.Buffer
-	buf.WriteByte(MsgNoData)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
-	}
-	return buf.Bytes(),nil
-}
-
-func notice_response(fields map[byte]string)([]byte,error){
+func notice_response(fields map[byte]string) ([]byte, error) {
 	var buf bytes.Buffer
 	payload_len := 1
 	for _, value := range fields {
@@ -453,8 +134,8 @@ func notice_response(fields map[byte]string)([]byte,error){
 	length := 4 + payload_len
 
 	buf.WriteByte(MsgNoticeResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
 	}
 	for code, value := range fields {
 		buf.WriteByte(code)
@@ -462,87 +143,76 @@ func notice_response(fields map[byte]string)([]byte,error){
 		buf.WriteByte(0)
 	}
 	buf.WriteByte(0)
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func notification_response(pid int32, channel string, payload string)([]byte,error){
-	var buf bytes.Buffer
-	length := 10 + len(channel) + len(payload)
-
-	buf.WriteByte(MsgNotificationResponse)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,pid); err!=nil {
-		return nil,err
-	}
-	buf.Write([]byte(channel))
-	buf.WriteByte(0)
-	buf.Write([]byte(payload))
-	buf.WriteByte(0)
-	return buf.Bytes(),nil
-}
-
-func parameter_description(param_oids []int32)([]byte,error){
-	var buf bytes.Buffer
-	length := 6 + len(param_oids)*4
-
-	buf.WriteByte(MsgParameterDescription)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
-	}
-	if err:= binary.Write(&buf,binary.BigEndian,int16(len(param_oids))); err!=nil {
-		return nil,err
-	}
-	for _, oid := range param_oids {
-		if err:= binary.Write(&buf,binary.BigEndian,oid); err!=nil {
-			return nil,err
-		}
-	}
-	return buf.Bytes(),nil
-}
-
-func parameter_status(name string, value string)([]byte,error){
+func parameter_status(name string, value string) ([]byte, error) {
 	var buf bytes.Buffer
 	length := 6 + len(name) + len(value)
 
 	buf.WriteByte(MsgParameterStatus)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
 	}
 	buf.Write([]byte(name))
 	buf.WriteByte(0)
 	buf.Write([]byte(value))
 	buf.WriteByte(0)
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func parse_complete()([]byte,error){
+func empty_query_response() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte(MsgEmptyQueryResponse)
+	if err := binary.Write(&buf, binary.BigEndian, int32(4)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func no_data() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte(MsgNoData)
+	if err := binary.Write(&buf, binary.BigEndian, int32(4)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func parse_complete() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte(MsgParseComplete)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(4)); err != nil {
+		return nil, err
 	}
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func portal_suspended()([]byte,error){
+func bind_complete() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte(MsgBindComplete)
+	if err := binary.Write(&buf, binary.BigEndian, int32(4)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func close_complete() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte(MsgCloseComplete)
+	if err := binary.Write(&buf, binary.BigEndian, int32(4)); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func portal_suspended() ([]byte, error) {
 	var buf bytes.Buffer
 	buf.WriteByte(MsgPortalSuspended)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(4)); err != nil {
+		return nil, err
 	}
-	return buf.Bytes(),nil
-}
-
-func ready_for_query(status byte)([]byte,error){
-	var buf bytes.Buffer
-	buf.WriteByte(MsgReadyForQuery)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(5)); err!=nil {
-		return nil,err
-	}
-	buf.WriteByte(status)
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
 type ColumnInfo struct {
@@ -555,7 +225,7 @@ type ColumnInfo struct {
 	FormatCode   int16
 }
 
-func row_description(columns []ColumnInfo)([]byte,error){
+func row_description(columns []ColumnInfo) ([]byte, error) {
 	var buf bytes.Buffer
 	payload_len := 2
 	for _, c := range columns {
@@ -564,25 +234,71 @@ func row_description(columns []ColumnInfo)([]byte,error){
 	length := 4 + payload_len
 
 	buf.WriteByte(MsgRowDescription)
-	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
 	}
-	if err:= binary.Write(&buf,binary.BigEndian,int16(len(columns))); err!=nil {
-		return nil,err
+	if err := binary.Write(&buf, binary.BigEndian, int16(len(columns))); err != nil {
+		return nil, err
 	}
 	for _, c := range columns {
 		buf.Write([]byte(c.Name))
 		buf.WriteByte(0)
-		if err:= binary.Write(&buf,binary.BigEndian,c.TableOID); err!=nil { return nil,err }
-		if err:= binary.Write(&buf,binary.BigEndian,c.ColumnAttr); err!=nil { return nil,err }
-		if err:= binary.Write(&buf,binary.BigEndian,c.TypeOID); err!=nil { return nil,err }
-		if err:= binary.Write(&buf,binary.BigEndian,c.TypeSize); err!=nil { return nil,err }
-		if err:= binary.Write(&buf,binary.BigEndian,c.TypeModifier); err!=nil { return nil,err }
-		if err:= binary.Write(&buf,binary.BigEndian,c.FormatCode); err!=nil { return nil,err }
+		if err := binary.Write(&buf, binary.BigEndian, c.TableOID); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&buf, binary.BigEndian, c.ColumnAttr); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&buf, binary.BigEndian, c.TypeOID); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&buf, binary.BigEndian, c.TypeSize); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&buf, binary.BigEndian, c.TypeModifier); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(&buf, binary.BigEndian, c.FormatCode); err != nil {
+			return nil, err
+		}
 	}
-	return buf.Bytes(),nil
+	return buf.Bytes(), nil
 }
 
-func main(){
+func data_row(values [][]byte) ([]byte, error) {
+	var buf bytes.Buffer
+	payload_len := 2
+	for _, v := range values {
+		if v == nil {
+			payload_len += 4
+		} else {
+			payload_len += 4 + len(v)
+		}
+	}
+	length := 4 + payload_len
+
+	buf.WriteByte(MsgDataRow)
+	if err := binary.Write(&buf, binary.BigEndian, int32(length)); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(&buf, binary.BigEndian, int16(len(values))); err != nil {
+		return nil, err
+	}
+	for _, v := range values {
+		if v == nil {
+			if err := binary.Write(&buf, binary.BigEndian, int32(-1)); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := binary.Write(&buf, binary.BigEndian, int32(len(v))); err != nil {
+				return nil, err
+			}
+			buf.Write(v)
+		}
+	}
+	return buf.Bytes(), nil
+}
+
+func main() {
 	println("Hello seamen!")
 }
