@@ -210,6 +210,18 @@ func close_complete()([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func command_complete(command_tag string)([]byte,error){
+	var buf bytes.Buffer 
+	length := len(command_tag) + 5 
+	buf.WriteByte(MsgCommandComplete)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	buf.Write([]byte(command_tag))
+	buf.WriteByte(0)
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
