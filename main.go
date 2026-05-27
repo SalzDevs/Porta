@@ -14,7 +14,7 @@ func main() {
 	defer listener.Close()
 	log.Printf("porta listening on %s", addr)
 
-	pool := NewPool()
+	pool := NewPool(20)
 	for {
 		client, err := listener.Accept()
 		if err != nil {

@@ -11,13 +11,15 @@ type PooledConn struct {
 }
 
 type Pool struct {
-	mu   sync.Mutex
-	idle map[string][]*PooledConn
+	mu      sync.Mutex
+	idle    map[string][]*PooledConn
+	maxSize int
 }
 
-func NewPool() *Pool {
+func NewPool(maxSize int) *Pool {
 	return &Pool{
-		idle: make(map[string][]*PooledConn),
+		idle:    make(map[string][]*PooledConn),
+		maxSize: maxSize,
 	}
 }
 
@@ -39,5 +41,9 @@ func (p *Pool) Put(key string, pc *PooledConn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	if len(p.idle[key]) >= p.maxSize {
+		pc.conn.Close()
+		return
+	}
 	p.idle[key] = append(p.idle[key], pc)
 }
