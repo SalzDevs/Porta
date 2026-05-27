@@ -8,27 +8,29 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
-	defer client.Close()
-
 	buf := bufio.NewReader(client)
 
 	var lengthBuf [4]byte
 	if _, err := io.ReadFull(buf, lengthBuf[:]); err != nil {
+		client.Close()
 		return
 	}
 	length := binary.BigEndian.Uint32(lengthBuf[:])
 
 	payload := make([]byte, length-4)
 	if _, err := io.ReadFull(buf, payload); err != nil {
+		client.Close()
 		return
 	}
 
 	fullMsg := append(lengthBuf[:], payload...)
 	user, database, _, err := parse_startup(fullMsg)
 	if err != nil {
+		client.Close()
 		return
 	}
 
@@ -40,11 +42,14 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 		log.Printf("[pool] reuse %s", key)
 		if _, err := client.Write(pc.startup); err != nil {
 			pc.conn.Close()
+			client.Close()
 			return
 		}
-		defer pool.Put(key, pc)
 
+		var wg sync.WaitGroup
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			io.Copy(client, pc.conn)
 			client.Close()
 		}()
@@ -52,6 +57,9 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 		if err := forwardClientMessages(buf, pc.conn); err != nil {
 			log.Printf("client forward: %v", err)
 		}
+		client.Close()
+		wg.Wait()
+		pool.Put(key, pc)
 		return
 	}
 
@@ -59,15 +67,18 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 	upstream, err := net.Dial("tcp", upstreamAddr)
 	if err != nil {
 		log.Printf("dial upstream: %v", err)
+		client.Close()
 		return
 	}
 
 	if _, err := upstream.Write(lengthBuf[:]); err != nil {
 		upstream.Close()
+		client.Close()
 		return
 	}
 	if _, err := upstream.Write(payload); err != nil {
 		upstream.Close()
+		client.Close()
 		return
 	}
 
@@ -75,10 +86,14 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 	if err := captureStartup(upstream, buf, client, &startup); err != nil {
 		log.Printf("capture startup: %v", err)
 		upstream.Close()
+		client.Close()
 		return
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		io.Copy(client, upstream)
 		client.Close()
 	}()
@@ -86,7 +101,8 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 	if err := forwardClientMessages(buf, upstream); err != nil {
 		log.Printf("client forward: %v", err)
 	}
-
+	client.Close()
+	wg.Wait()
 	pool.Put(key, &PooledConn{conn: upstream, startup: startup.Bytes()})
 }
 
