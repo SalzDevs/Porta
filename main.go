@@ -441,6 +441,27 @@ func no_data()([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func notice_response(fields map[byte]string)([]byte,error){
+	var buf bytes.Buffer
+	payload_len := 1
+	for _, value := range fields {
+		payload_len += 1 + len(value) + 1
+	}
+	length := 4 + payload_len
+
+	buf.WriteByte(MsgNoticeResponse)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	for code, value := range fields {
+		buf.WriteByte(code)
+		buf.Write([]byte(value))
+		buf.WriteByte(0)
+	}
+	buf.WriteByte(0)
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
