@@ -314,6 +314,40 @@ func copy_both_response(overall_format int8, column_formats []int16)([]byte,erro
 	return buf.Bytes(),nil	
 }
 
+func data_row(values [][]byte)([]byte,error){
+	var buf bytes.Buffer
+	payload_len := 2
+	for _, v := range values {
+		if v == nil {
+			payload_len += 4
+		} else {
+			payload_len += 4 + len(v)
+		}
+	}
+	length := 4 + payload_len
+
+	buf.WriteByte(MsgDataRow)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int16(len(values))); err!=nil {
+		return nil,err
+	}
+	for _, v := range values {
+		if v == nil {
+			if err:= binary.Write(&buf,binary.BigEndian,int32(-1)); err!=nil {
+				return nil,err
+			}
+		} else {
+			if err:= binary.Write(&buf,binary.BigEndian,int32(len(v))); err!=nil {
+				return nil,err
+			}
+			buf.Write(v)
+		}
+	}
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
