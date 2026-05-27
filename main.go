@@ -14,12 +14,13 @@ func main() {
 	defer listener.Close()
 	log.Printf("porta listening on %s", addr)
 
+	pool := NewPool()
 	for {
 		client, err := listener.Accept()
 		if err != nil {
 			log.Printf("accept: %v", err)
 			continue
 		}
-		go handleProxy(client, "127.0.0.1:5432")
+		go handleProxy(client, pool, "127.0.0.1:5432")
 	}
 }
