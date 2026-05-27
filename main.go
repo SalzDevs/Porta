@@ -178,6 +178,20 @@ func authentication_sasl_final(sasl_additional_data []byte)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func backend_key_data(secret_key []byte, process_id int32)([]byte,error){
+	var buf bytes.Buffer  
+	length := len(secret_key) + 8 
+	buf.WriteByte(MsgBackendKeyData)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,process_id); err!=nil {
+		return nil,err
+	}
+	buf.Write([]byte(secret_key))
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
