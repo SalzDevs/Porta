@@ -23,6 +23,7 @@ const (
 	MsgCommandComplete   = 'C'
 	MsgDataRow           = 'D'
 	MsgRowDescription    = 'T'
+	MsgNegotiateProtocolVersion = 'v'
 	MsgFunctionCallResponse = 'V'
 	MsgEmptyQueryResponse = 'I'
 	MsgNoticeResponse    = 'N'
@@ -401,6 +402,31 @@ func function_call_response(result []byte)([]byte,error){
 	}
 	if result != nil {
 		buf.Write(result)
+	}
+	return buf.Bytes(),nil
+}
+
+func negotiate_protocol_version(newest_minor int32, unrecognized_options []string)([]byte,error){
+	var buf bytes.Buffer
+	payload_len := 4 + 4 
+	for _, opt := range unrecognized_options {
+		payload_len += len(opt) + 1 
+	}
+	length := 4 + payload_len
+
+	buf.WriteByte(MsgNegotiateProtocolVersion)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,newest_minor); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int32(len(unrecognized_options))); err!=nil {
+		return nil,err
+	}
+	for _, opt := range unrecognized_options {
+		buf.Write([]byte(opt))
+		buf.WriteByte(0)
 	}
 	return buf.Bytes(),nil
 }
