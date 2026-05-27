@@ -545,6 +545,44 @@ func ready_for_query(status byte)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+type ColumnInfo struct {
+	Name         string
+	TableOID     int32
+	ColumnAttr   int16
+	TypeOID      int32
+	TypeSize     int16
+	TypeModifier int32
+	FormatCode   int16
+}
+
+func row_description(columns []ColumnInfo)([]byte,error){
+	var buf bytes.Buffer
+	payload_len := 2
+	for _, c := range columns {
+		payload_len += len(c.Name) + 1 + 4 + 2 + 4 + 2 + 4 + 2
+	}
+	length := 4 + payload_len
+
+	buf.WriteByte(MsgRowDescription)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int16(len(columns))); err!=nil {
+		return nil,err
+	}
+	for _, c := range columns {
+		buf.Write([]byte(c.Name))
+		buf.WriteByte(0)
+		if err:= binary.Write(&buf,binary.BigEndian,c.TableOID); err!=nil { return nil,err }
+		if err:= binary.Write(&buf,binary.BigEndian,c.ColumnAttr); err!=nil { return nil,err }
+		if err:= binary.Write(&buf,binary.BigEndian,c.TypeOID); err!=nil { return nil,err }
+		if err:= binary.Write(&buf,binary.BigEndian,c.TypeSize); err!=nil { return nil,err }
+		if err:= binary.Write(&buf,binary.BigEndian,c.TypeModifier); err!=nil { return nil,err }
+		if err:= binary.Write(&buf,binary.BigEndian,c.FormatCode); err!=nil { return nil,err }
+	}
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
