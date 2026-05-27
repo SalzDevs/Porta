@@ -201,6 +201,15 @@ func bind_complete()([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func close_complete()([]byte,error){
+	var buf bytes.Buffer  
+	buf.WriteByte(MsgCloseComplete)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
