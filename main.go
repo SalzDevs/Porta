@@ -501,6 +501,21 @@ func parameter_description(param_oids []int32)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func parameter_status(name string, value string)([]byte,error){
+	var buf bytes.Buffer
+	length := 6 + len(name) + len(value)
+
+	buf.WriteByte(MsgParameterStatus)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	buf.Write([]byte(name))
+	buf.WriteByte(0)
+	buf.Write([]byte(value))
+	buf.WriteByte(0)
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
