@@ -48,6 +48,11 @@ func forwardStartup(r *bufio.Reader, w io.Writer) error {
 		return err
 	}
 
+	fullMsg := append(lengthBuf[:], payload...)
+	if user, database, _, err := parse_startup(fullMsg); err == nil {
+		log.Printf("[startup] user=%s database=%s", user, database)
+	}
+
 	if _, err := w.Write(lengthBuf[:]); err != nil {
 		return err
 	}
