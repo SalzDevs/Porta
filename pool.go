@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net"
 	"sync"
 	"time"
@@ -19,13 +20,13 @@ type Pool struct {
 	idleTimeout time.Duration
 }
 
-func NewPool(maxSize int, idleTimeout time.Duration) *Pool {
+func NewPool(ctx context.Context, maxSize int, idleTimeout time.Duration) *Pool {
 	p := &Pool{
 		idle:        make(map[string][]*PooledConn),
 		maxSize:     maxSize,
 		idleTimeout: idleTimeout,
 	}
-	go p.sweep()
+	go p.sweep(ctx)
 	return p
 }
 
@@ -56,21 +57,28 @@ func (p *Pool) Put(key string, pc *PooledConn) {
 	p.idle[key] = append(p.idle[key], pc)
 }
 
-func (p *Pool) sweep() {
+func (p *Pool) sweep(ctx context.Context) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+
 	for {
-		time.Sleep(60 * time.Second)
-		p.mu.Lock()
-		for key, conns := range p.idle {
-			alive := make([]*PooledConn, 0, len(conns))
-			for _, pc := range conns {
-				if time.Since(pc.lastUsed) > p.idleTimeout {
-					pc.conn.Close()
-				} else {
-					alive = append(alive, pc)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			p.mu.Lock()
+			for key, conns := range p.idle {
+				alive := make([]*PooledConn, 0, len(conns))
+				for _, pc := range conns {
+					if time.Since(pc.lastUsed) > p.idleTimeout {
+						pc.conn.Close()
+					} else {
+						alive = append(alive, pc)
+					}
 				}
+				p.idle[key] = alive
 			}
-			p.idle[key] = alive
+			p.mu.Unlock()
 		}
-		p.mu.Unlock()
 	}
 }

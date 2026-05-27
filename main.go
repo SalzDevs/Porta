@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -37,16 +41,40 @@ func main() {
 	if err != nil {
 		log.Fatalf("listen: %v", err)
 	}
-	defer listener.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		log.Println("shutting down...")
+		cancel()
+		listener.Close()
+	}()
+
+	pool := NewPool(ctx, poolSize, idleTimeout)
+	var wg sync.WaitGroup
+
 	log.Printf("porta listening on %s", listen)
 
-	pool := NewPool(poolSize, idleTimeout)
 	for {
 		client, err := listener.Accept()
 		if err != nil {
+			if ctx.Err() != nil {
+				break
+			}
 			log.Printf("accept: %v", err)
 			continue
 		}
-		go handleProxy(client, pool, upstream)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			handleProxy(ctx, client, pool, upstream)
+		}()
 	}
+
+	wg.Wait()
+	log.Println("shutdown complete")
 }

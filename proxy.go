@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -11,7 +12,7 @@ import (
 	"sync"
 )
 
-func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
+func handleProxy(ctx context.Context, client net.Conn, pool *Pool, upstreamAddr string) {
 	buf := bufio.NewReader(client)
 
 	var lengthBuf [4]byte
@@ -54,7 +55,7 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 			client.Close()
 		}()
 
-		if err := forwardClientMessages(buf, pc.conn); err != nil {
+		if err := forwardClientMessages(ctx, buf, pc.conn); err != nil {
 			log.Printf("client forward: %v", err)
 		}
 		client.Close()
@@ -98,7 +99,7 @@ func handleProxy(client net.Conn, pool *Pool, upstreamAddr string) {
 		client.Close()
 	}()
 
-	if err := forwardClientMessages(buf, upstream); err != nil {
+	if err := forwardClientMessages(ctx, buf, upstream); err != nil {
 		log.Printf("client forward: %v", err)
 	}
 	client.Close()
@@ -178,8 +179,14 @@ func captureStartup(upstream net.Conn, clientBuf *bufio.Reader, client net.Conn,
 	}
 }
 
-func forwardClientMessages(r *bufio.Reader, w io.Writer) error {
+func forwardClientMessages(ctx context.Context, r *bufio.Reader, w io.Writer) error {
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		msgType, err := r.ReadByte()
 		if err != nil {
 			return err
