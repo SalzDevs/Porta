@@ -516,6 +516,15 @@ func parameter_status(name string, value string)([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func parse_complete()([]byte,error){
+	var buf bytes.Buffer
+	buf.WriteByte(MsgParseComplete)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
+	}
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
