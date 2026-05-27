@@ -535,6 +535,16 @@ func portal_suspended()([]byte,error){
 	return buf.Bytes(),nil
 }
 
+func ready_for_query(status byte)([]byte,error){
+	var buf bytes.Buffer
+	buf.WriteByte(MsgReadyForQuery)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(5)); err!=nil {
+		return nil,err
+	}
+	buf.WriteByte(status)
+	return buf.Bytes(),nil
+}
+
 func main(){
 	println("Hello seamen!")
 }
