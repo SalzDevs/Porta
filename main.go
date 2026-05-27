@@ -19,6 +19,7 @@ const (
 	MsgReadyForQuery     = 'Z'
 	MsgErrorResponse     = 'E'
 	MsgBackendKeyData    = 'K'
+	MsgParameterDescription = 't'
 	MsgParameterStatus   = 'S'
 	MsgCommandComplete   = 'C'
 	MsgDataRow           = 'D'
@@ -478,6 +479,25 @@ func notification_response(pid int32, channel string, payload string)([]byte,err
 	buf.WriteByte(0)
 	buf.Write([]byte(payload))
 	buf.WriteByte(0)
+	return buf.Bytes(),nil
+}
+
+func parameter_description(param_oids []int32)([]byte,error){
+	var buf bytes.Buffer
+	length := 6 + len(param_oids)*4
+
+	buf.WriteByte(MsgParameterDescription)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(length)); err!=nil {
+		return nil,err
+	}
+	if err:= binary.Write(&buf,binary.BigEndian,int16(len(param_oids))); err!=nil {
+		return nil,err
+	}
+	for _, oid := range param_oids {
+		if err:= binary.Write(&buf,binary.BigEndian,oid); err!=nil {
+			return nil,err
+		}
+	}
 	return buf.Bytes(),nil
 }
 
