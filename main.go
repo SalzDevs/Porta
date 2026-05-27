@@ -26,6 +26,7 @@ const (
 	MsgNegotiateProtocolVersion = 'v'
 	MsgFunctionCallResponse = 'V'
 	MsgEmptyQueryResponse = 'I'
+	MsgNoData            = 'n'
 	MsgNoticeResponse    = 'N'
 	MsgParseComplete     = '1'
 	MsgBindComplete      = '2'
@@ -427,6 +428,15 @@ func negotiate_protocol_version(newest_minor int32, unrecognized_options []strin
 	for _, opt := range unrecognized_options {
 		buf.Write([]byte(opt))
 		buf.WriteByte(0)
+	}
+	return buf.Bytes(),nil
+}
+
+func no_data()([]byte,error){
+	var buf bytes.Buffer
+	buf.WriteByte(MsgNoData)
+	if err:= binary.Write(&buf,binary.BigEndian,int32(4)); err!=nil {
+		return nil,err
 	}
 	return buf.Bytes(),nil
 }
